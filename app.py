@@ -1,92 +1,38 @@
-import time  # to simulate a real time data, time loop
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
-import numpy as np  # np mean, np random
-import pandas as pd  # read csv, df manipulation
-import plotly.express as px  # interactive charts
-import streamlit as st  # 🎈 data web app development
+# Function to load data
+@st.cache
+def load_data():
+    data = pd.read_csv('dashboard_sample_data.csv')
+    data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%y')
+    return data
 
-st.set_page_config(
-    page_title="Real-Time Data Science Dashboard",
-    page_icon="✅",
-    layout="wide",
-)
+# Load data
+data = load_data()
 
-# read csv from a github repo
-dataset_url = "https://raw.githubusercontent.com/Lexie88rus/bank-marketing-analysis/master/bank.csv"
+# Sidebar - Country selection
+country_list = data['Country'].unique()
+selected_country = st.sidebar.selectbox('Country', country_list)
 
-# read csv from a URL
-@st.experimental_memo
-def get_data() -> pd.DataFrame:
-    return pd.read_csv(dataset_url)
+# Sidebar - Metric selection
+metric_options = ['Website visits', 'Facebook paid reach', 'Transactions', 'Conversion rate']
+selected_metric = st.sidebar.selectbox('Metric', metric_options)
 
-df = get_data()
+# Filtering data based on the selected country
+data_filtered = data[data['Country'] == selected_country]
 
-# dashboard title
-st.title("Real-Time / Live Data Science Dashboard")
+# Main Dashboard
+st.title('Marketing Campaign Dashboard')
 
-# top-level filters
-job_filter = st.selectbox("Select the Job", pd.unique(df["job"]))
+# Plotting the selected metric
+st.subheader(selected_metric)
+fig, ax = plt.subplots()
+ax.plot(data_filtered['Date'], data_filtered[selected_metric], marker='o')
+ax.set_xlabel('Date')
+ax.set_ylabel(selected_metric)
+ax.grid(True)
+st.pyplot(fig)
 
-# creating a single-element container
-placeholder = st.empty()
-
-# dataframe filter
-df = df[df["job"] == job_filter]
-
-# near real-time / live feed simulation
-for seconds in range(200):
-
-    df["age_new"] = df["age"] * np.random.choice(range(1, 5))
-    df["balance_new"] = df["balance"] * np.random.choice(range(1, 5))
-
-    # creating KPIs
-    avg_age = np.mean(df["age_new"])
-
-    count_married = int(
-        df[(df["marital"] == "married")]["marital"].count()
-        + np.random.choice(range(1, 30))
-    )
-
-    balance = np.mean(df["balance_new"])
-
-    with placeholder.container():
-
-        # create three columns
-        kpi1, kpi2, kpi3 = st.columns(3)
-
-        # fill in those three columns with respective metrics or KPIs
-        kpi1.metric(
-            label="Age ⏳",
-            value=round(avg_age),
-            delta=round(avg_age) - 10,
-        )
-        
-        kpi2.metric(
-            label="Married Count 💍",
-            value=int(count_married),
-            delta=-10 + count_married,
-        )
-        
-        kpi3.metric(
-            label="A/C Balance ＄",
-            value=f"$ {round(balance,2)} ",
-            delta=-round(balance / count_married) * 100,
-        )
-
-        # create two columns for charts
-        fig_col1, fig_col2 = st.columns(2)
-        with fig_col1:
-            st.markdown("### First Chart")
-            fig = px.density_heatmap(
-                data_frame=df, y="age_new", x="marital"
-            )
-            st.write(fig)
-            
-        with fig_col2:
-            st.markdown("### Second Chart")
-            fig2 = px.histogram(data_frame=df, x="age_new")
-            st.write(fig2)
-
-        st.markdown("### Detailed Data View")
-        st.dataframe(df)
-        time.sleep(1)
