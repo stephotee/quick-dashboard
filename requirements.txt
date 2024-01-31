@@ -1,0 +1,5 @@
+streamlit
+time
+numpy
+pandas
+plotly
